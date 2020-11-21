@@ -23,6 +23,7 @@ void ST7565_Select(void) {
 	
     #ifdef CS_PORT
 			HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
+			// CS_GPIO_Port->BSRR = ( CS_Pin << 16 );
 	#endif
 	
 }
@@ -36,6 +37,7 @@ void ST7565_Unselect(void) {
 	
     #ifdef CS_PORT
 			HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
+			// CS_GPIO_Port->BSRR = CS_Pin;
 	#endif
 	
 }
@@ -71,9 +73,6 @@ void ST7565_Reset( void ){
 	******************************************************************************
 */
 void ST7565_w_dat( uint8_t Dat ){  
-	
-	// pin DC HIGH
-	HAL_GPIO_WritePin( DC_GPIO_Port, DC_Pin, GPIO_PIN_SET );
 	
 	//-- если захотим переделать под HAL ------------------	
 	#ifdef ST7565_SPI_HAL
@@ -149,7 +148,8 @@ void ST7565_w_dat( uint8_t Dat ){
 void ST7565_w_cmd( uint8_t Command ){  
 	
 	// pin DC LOW
-	HAL_GPIO_WritePin( DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET );
+	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
+	//DC_GPIO_Port->BSRR = ( DC_Pin << 16 );
 	
 	//-- если захотим переделать под HAL ------------------	
 	#ifdef ST7565_SPI_HAL
@@ -208,6 +208,10 @@ void ST7565_w_cmd( uint8_t Command ){
 			
 	#endif
 	//-----------------------------------------------------------------------------------
+	
+	// pin DC HIGH
+	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
+	//DC_GPIO_Port->BSRR = DC_Pin;
 	
 } 
 //--------------------------------------------------------------------------------
