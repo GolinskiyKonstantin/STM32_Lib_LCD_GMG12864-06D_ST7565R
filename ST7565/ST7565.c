@@ -22,8 +22,17 @@ uint8_t ST7565_buffer[SCREEN_WIDTH * SCREEN_HEIGHT / 8];
 void ST7565_Select(void) {
 	
     #ifdef CS_PORT
-			HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
-			// CS_GPIO_Port->BSRR = ( CS_Pin << 16 );
+			//-- если захотим переделать под HAL ------------------	
+			#ifdef ST7565_SPI_HAL
+				HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_RESET);
+			#endif
+			//-----------------------------------------------------
+			
+			//-- если захотим переделать под CMSIS  ---------------
+			#ifdef ST7565_SPI_CMSIS
+				CS_GPIO_Port->BSRR = ( CS_Pin << 16 );
+			#endif
+			//-----------------------------------------------------
 	#endif
 	
 }
@@ -36,8 +45,17 @@ void ST7565_Select(void) {
 void ST7565_Unselect(void) {
 	
     #ifdef CS_PORT
-			HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
-			// CS_GPIO_Port->BSRR = CS_Pin;
+			//-- если захотим переделать под HAL ------------------	
+			#ifdef ST7565_SPI_HAL
+				HAL_GPIO_WritePin(CS_GPIO_Port, CS_Pin, GPIO_PIN_SET);
+			#endif
+			//-----------------------------------------------------
+			
+			//-- если захотим переделать под CMSIS  ---------------
+			#ifdef ST7565_SPI_CMSIS
+					 CS_GPIO_Port->BSRR = CS_Pin;
+			#endif
+			//-----------------------------------------------------
 	#endif
 	
 }
@@ -54,10 +72,10 @@ void ST7565_Unselect(void) {
 */
 void ST7565_Reset( void ){  
 	
- HAL_GPIO_WritePin( RESET_GPIO_Port, RESET_Pin, GPIO_PIN_RESET );
+ HAL_GPIO_WritePin( RES_GPIO_Port, RES_Pin, GPIO_PIN_RESET );
  HAL_Delay( 10 ); 
 	
- HAL_GPIO_WritePin( RESET_GPIO_Port, RESET_Pin, GPIO_PIN_SET );
+ HAL_GPIO_WritePin( RES_GPIO_Port, RES_Pin, GPIO_PIN_SET );
  HAL_Delay( 10 );  
 }
 //--------------------------------------------------------------------------------
@@ -91,15 +109,23 @@ void ST7565_w_dat( uint8_t Dat ){
 			// Disable SPI	
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 &= ~SPI_CR1_SPE;
 			// Enable SPI
-			SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
+			if((ST7565_SPI_CMSIS->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE){
+				// If disabled, I enable it
+				SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
+			}
 			
 			// Ждем, пока не освободится буфер передатчика
-			// while((ST7565_SPI_CMSIS->SR&SPI_SR_BSY)){};
+			// TXE(Transmit buffer empty) – устанавливается когда буфер передачи(регистр SPI_DR) пуст, очищается при загрузке данных
+			while( (ST7565_SPI_CMSIS->SR & SPI_SR_TXE) == RESET ){};
 		
 			// передаем 1 байт информации--------------
 			*((__IO uint8_t *)&ST7565_SPI_CMSIS->DR) = Dat;
-			// ждем когда буфер освободиться ( тем самым знаем что байт отправили )
-			while(!(ST7565_SPI_CMSIS->SR & SPI_SR_TXE)){};
+			
+			// TXE(Transmit buffer empty) – устанавливается когда буфер передачи(регистр SPI_DR) пуст, очищается при загрузке данных
+			while( (ST7565_SPI_CMSIS->SR & (SPI_SR_TXE | SPI_SR_BSY)) != SPI_SR_TXE ){};
+			
+			// Ждем, пока не освободится буфер передатчика
+			// while((ST7565_SPI_CMSIS->SR&SPI_SR_BSY)){};
 			
 			// Disable SPI	
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);
@@ -111,8 +137,11 @@ void ST7565_w_dat( uint8_t Dat ){
 			// Disable SPI	
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 &= ~SPI_CR1_SPE;
 			// Enable SPI
-			SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
-
+			if((ST7565_SPI_CMSIS->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE){
+				// If disabled, I enable it
+				SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
+			}
+			
 			SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_CSTART);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_CSTART;
 			
 			// ждем пока SPI будет свободна------------
@@ -147,36 +176,49 @@ void ST7565_w_dat( uint8_t Dat ){
 */
 void ST7565_w_cmd( uint8_t Command ){  
 	
-	// pin DC LOW
-	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
-	//DC_GPIO_Port->BSRR = ( DC_Pin << 16 );
-	
 	//-- если захотим переделать под HAL ------------------	
 	#ifdef ST7565_SPI_HAL
-	
+		
+		// pin DC LOW
+		 HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_RESET);
+		 
 		 HAL_SPI_Transmit(&ST7565_SPI_HAL, &Command, 1, HAL_MAX_DELAY);
 		 while(HAL_SPI_GetState(&ST7565_SPI_HAL) != HAL_SPI_STATE_READY){};
+		 
+		 // pin DC HIGH
+		 HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
 		 
 	#endif
 	//-----------------------------------------------------
 	
 	//-- если захотим переделать под CMSIS  ---------------------------------------------
 	#ifdef ST7565_SPI_CMSIS
-	
+		
+		// pin DC LOW
+		DC_GPIO_Port->BSRR = ( DC_Pin << 16 );
+		
 		//======  FOR F-SERIES ===========================================================
 			
 			// Disable SPI	
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 &= ~SPI_CR1_SPE;
 			// Enable SPI
-			SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
+			if((ST7565_SPI_CMSIS->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE){
+				// If disabled, I enable it
+				SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
+			}
 			
 			// Ждем, пока не освободится буфер передатчика
-			// while((ST7565_SPI_CMSIS->SR&SPI_SR_BSY)){};
+			// TXE(Transmit buffer empty) – устанавливается когда буфер передачи(регистр SPI_DR) пуст, очищается при загрузке данных
+			while( (ST7565_SPI_CMSIS->SR & SPI_SR_TXE) == RESET ){};
 		
 			// передаем 1 байт информации--------------
 			*((__IO uint8_t *)&ST7565_SPI_CMSIS->DR) = Command;
-			// ждем когда буфер освободиться ( тем самым знаем что байт отправили )
-			while(!(ST7565_SPI_CMSIS->SR & SPI_SR_TXE)){};
+			
+			// TXE(Transmit buffer empty) – устанавливается когда буфер передачи(регистр SPI_DR) пуст, очищается при загрузке данных
+			while( (ST7565_SPI_CMSIS->SR & (SPI_SR_TXE | SPI_SR_BSY)) != SPI_SR_TXE ){};
+			
+			// Ждем, пока не освободится буфер передатчика
+			// while((ST7565_SPI_CMSIS->SR&SPI_SR_BSY)){};
 			
 			// Disable SPI	
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);
@@ -188,8 +230,11 @@ void ST7565_w_cmd( uint8_t Command ){
 			// Disable SPI	
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 &= ~SPI_CR1_SPE;
 			// Enable SPI
-			SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
-
+			if((ST7565_SPI_CMSIS->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE){
+				// If disabled, I enable it
+				SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_SPE;
+			}
+			
 			SET_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_CSTART);	// ST7565_SPI_CMSIS->CR1 |= SPI_CR1_CSTART;
 			
 			// ждем пока SPI будет свободна------------
@@ -205,13 +250,12 @@ void ST7565_w_cmd( uint8_t Command ){
 			//CLEAR_BIT(ST7565_SPI_CMSIS->CR1, SPI_CR1_SPE);
 			
 */		//================================================================================
-			
+		
+		// pin DC HIGH
+		DC_GPIO_Port->BSRR = DC_Pin;
+		
 	#endif
 	//-----------------------------------------------------------------------------------
-	
-	// pin DC HIGH
-	HAL_GPIO_WritePin(DC_GPIO_Port, DC_Pin, GPIO_PIN_SET);
-	//DC_GPIO_Port->BSRR = DC_Pin;
 	
 } 
 //--------------------------------------------------------------------------------
@@ -484,7 +528,7 @@ void ST7565_DrawBitmap(int16_t x, int16_t y, const unsigned char* bitmap, int16_
 
 	******************************************************************************
 */
-char ST7565_DrawChar(int16_t x, int16_t y, char ch, FontDef_t* Font, uint8_t multiplier, uint8_t color) {
+void ST7565_DrawChar(int16_t x, int16_t y, unsigned char ch, FontDef_t* Font, uint8_t multiplier, uint8_t color) {
 	
 	uint16_t i, j;
 	
@@ -499,59 +543,67 @@ char ST7565_DrawChar(int16_t x, int16_t y, char ch, FontDef_t* Font, uint8_t mul
 	}
 	
 	/* Check available space in LCD */
-	if ( SCREEN_WIDTH <= ( x + Font->FontWidth) || SCREEN_HEIGHT <= ( y + Font->FontHeight)){
-		/* Error */
-		return 0;
-	}
+	if ( SCREEN_WIDTH >= ( x + Font->FontWidth) || SCREEN_HEIGHT >= ( y + Font->FontHeight)){
 	
-	/* Go through font */
-	for (i = 0; i < Font->FontHeight; i++) {
-		
-		if( ch < 127 ){			
-			b = Font->data[(ch - 32) * Font->FontHeight + i];
-		}
-		
-		else if( (uint8_t) ch > 191 ){
-			// +96 это так как латинские символы и знаки в шрифтах занимают 96 позиций
-			// и если в шрифте который содержит сперва латиницу и спец символы и потом 
-			// только кирилицу то нужно добавлять 95 если шрифт 
-			// содержит только кирилицу то +96 не нужно
-			b = Font->data[((ch - 192) + 96) * Font->FontHeight + i];
-		}
-		
-		else if( (uint8_t) ch == 168 ){	// 168 символ по ASCII - Ё
-			// 160 эллемент ( символ Ё ) 
-			b = Font->data[( 160 ) * Font->FontHeight + i];
-		}
-		
-		else if( (uint8_t) ch == 184 ){	// 184 символ по ASCII - ё
-			// 161 эллемент  ( символ ё ) 
-			b = Font->data[( 161 ) * Font->FontHeight + i];
-		}
-		//-------------------------------------------------------------------------------
-		
-		
-		for (j = 0; j < Font->FontWidth; j++) {
+		/* Go through font */
+		for (i = 0; i < Font->FontHeight; i++) {
 			
-			if ((b << j) & 0x8000) {
-				
-				for (yy = 0; yy < multiplier; yy++){
-					for (xx = 0; xx < multiplier; xx++){
-							ST7565_Draw_pixel(X+xx, Y+yy, color);
-					}
-				}
-				
+			if( ch < 127 ){			
+				b = Font->data[(ch - 32) * Font->FontHeight + i];
 			}
 			
-			X = X + multiplier;
+			else if( (uint8_t) ch > 191 ){
+				// +96 это так как латинские символы и знаки в шрифтах занимают 96 позиций
+				// и если в шрифте который содержит сперва латиницу и спец символы и потом 
+				// только кирилицу то нужно добавлять 95 если шрифт 
+				// содержит только кирилицу то +96 не нужно
+				b = Font->data[((ch - 192) + 96) * Font->FontHeight + i];
+			}
+			
+			else if( (uint8_t) ch == 168 ){	// 168 символ по ASCII - Ё
+				// 160 эллемент ( символ Ё ) 
+				b = Font->data[( 160 ) * Font->FontHeight + i];
+			}
+			
+			else if( (uint8_t) ch == 184 ){	// 184 символ по ASCII - ё
+				// 161 эллемент  ( символ ё ) 
+				b = Font->data[( 161 ) * Font->FontHeight + i];
+			}
+			//-------------------------------------------------------------------------------
+			
+			
+			for (j = 0; j < Font->FontWidth; j++) {
+				
+				if ((b << j) & 0x8000) {
+					
+					for (yy = 0; yy < multiplier; yy++){
+						for (xx = 0; xx < multiplier; xx++){
+								ST7565_Draw_pixel(X+xx, Y+yy, color);
+						}
+					}
+					
+				}
+				// если фон очищать то оставляем если чтоб фон оставался старый то коментируем эту часть --------------------------------------------
+				//-----------------------------------------------------------------------------------------------------------------------------------
+				else{
+					
+					for (yy = 0; yy < multiplier; yy++){
+						for (xx = 0; xx < multiplier; xx++){
+								ST7565_Draw_pixel(X+xx, Y+yy, !color);
+						}
+					}
+				}
+				//-----------------------------------------------------------------------------------------------------------------------------------
+				//-----------------------------------------------------------------------------------------------------------------------------------
+				
+				X = X + multiplier;
+			}
+			
+			X = x;
+			Y = Y + multiplier;
 		}
 		
-		X = x;
-		Y = Y + multiplier;
 	}
-		
-	/* Return character written */
-	return ch;
 }
 //----------------------------------------------------------------------------------
 
@@ -561,34 +613,60 @@ char ST7565_DrawChar(int16_t x, int16_t y, char ch, FontDef_t* Font, uint8_t mul
 	* @brief	 ( описание ):  функция пишет строку
 	* @param	( параметры ):	координаты X Y, символ, шрифт, множитель, цвет 1 или 0
 	* @return  ( возвращает ):	
-
-	// РУССКИЙ шрифт 
-	// Если пишем по РУССКИ то только через функцию utf8rus()
-	ST7565_Print ( 10, 10, utf8rus("Привет HELLO"), &Font_6x8, 1, 1 ); // печатаем надпись с указаным шрифтом и цветом ( 0- белый , 1 -черный )
-	// незабываем каждый раз после вызова функции utf8rus() освобождать память
-	free( pText );	// освобождаем память выделенную в функции utf8rus() посредством malloc();
-
 	******************************************************************************
 */
-char ST7565_Print(int16_t x, int16_t y, char* str, FontDef_t* Font, uint8_t multiplier, uint8_t color) {
+void ST7565_Print(int16_t x, int16_t y, char* str, FontDef_t* Font, uint8_t multiplier, uint8_t color) {
 	
 	if( multiplier < 1 ){
 		multiplier = 1;
 	}
 	
-	while (*str) {
-		/* Write character by character */
-		if ( ST7565_DrawChar( x, y, *str, Font, multiplier, color) != *str ){
-			/* Return error */
-			return *str;
+	unsigned char buff_char;
+	
+	uint16_t len = strlen(str);
+	
+	while (len--) {
+		
+		//---------------------------------------------------------------------
+		// проверка на кириллицу UTF-8, если латиница то пропускаем if
+		// Расширенные символы ASCII Win-1251 кириллица (код символа 128-255)
+		// проверяем первый байт из двух ( так как UTF-8 ето два байта )
+		// если он больше либо равен 0xC0 ( первый байт в кириллеце будет равен 0xD0 либо 0xD1 именно в алфавите )
+		if ( (uint8_t)*str >= 0xC0 ){	// код 0xC0 соответствует символу кириллица 'A' по ASCII Win-1251
+			
+			// проверяем какой именно байт первый 0xD0 либо 0xD1
+			switch ((uint8_t)*str) {
+				case 0xD0: {
+					// увеличиваем массив так как нам нужен второй байт
+					str++;
+					// проверяем второй байт там сам символ
+					if ((uint8_t)*str == 0x81) { buff_char = 0xA8; break; }		// байт символа Ё ( если нужнф еще символы добавляем тут и в функции DrawChar() )
+					if ((uint8_t)*str >= 0x90 && (uint8_t)*str <= 0xBF){ buff_char = (*str) + 0x30; }	// байт символов А...Я а...п  делаем здвиг на +48
+					break;
+				}
+				case 0xD1: {
+					// увеличиваем массив так как нам нужен второй байт
+					str++;
+					// проверяем второй байт там сам символ
+					if ((uint8_t)*str == 0x91) { buff_char = 0xB8; break; }		// байт символа ё ( если нужнф еще символы добавляем тут и в функции DrawChar() )
+					if ((uint8_t)*str >= 0x80 && (uint8_t)*str <= 0x8F){ buff_char = (*str) + 0x70; }	// байт символов п...я	елаем здвиг на +112
+					break;
+				}
+			}
+			// уменьшаем еще переменную так как израсходывали 2 байта для кириллицы
+			len--;
+			
+			ST7565_DrawChar( x, y, buff_char, Font, multiplier, color);
+		}
+		//---------------------------------------------------------------------
+		else{			
+			ST7565_DrawChar( x, y, *str, Font, multiplier, color);
 		}
 		
 		x = x + (Font->FontWidth * multiplier);
 		/* Increase string pointer */
 		str++;
 	}
-	/* Everything OK, zero should be returned */
-	return *str;
 }
 //----------------------------------------------------------------------------------
 

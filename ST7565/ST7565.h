@@ -34,7 +34,7 @@ extern "C" {
 	( пины желательно называем как в коде если нет то в коде ставим нужнве )
 
 	CS   ->   CS ( chip select )
-	RSE  ->   RESET
+	RSE  ->   RES ( Reset )
 	RS   ->   DC ( date / command )
 	SCL	 ->   SCL
 	SI	 ->   MOSI
@@ -72,10 +72,10 @@ extern "C" {
 			#define DC_Pin				GPIO_PIN_11
 		#endif
 		
-		#if defined (RESET_GPIO_Port)
+		#if defined (RES_GPIO_Port)
 		#else
-			#define RESET_GPIO_Port   	GPIOA
-			#define RESET_Pin			GPIO_PIN_12
+			#define RES_GPIO_Port   	GPIOA
+			#define RES_Pin			GPIO_PIN_12
 		#endif
 		
 		//--  Cесли используем порт CS для выбора устройства тогда раскомментировать ------------
@@ -326,23 +326,16 @@ void ST7565_DrawBitmap(int16_t x, int16_t y, const unsigned char* bitmap, int16_
 
 	******************************************************************************
 */
-char ST7565_DrawChar(int16_t x, int16_t y, char ch, FontDef_t* Font, uint8_t multiplier, uint8_t color);
+void ST7565_DrawChar(int16_t x, int16_t y, unsigned char ch, FontDef_t* Font, uint8_t multiplier, uint8_t color);
 //----------------------------------------------------------------------------------
 /*
 	******************************************************************************
 	* @brief	 ( описание ):  функция пишет строку
 	* @param	( параметры ):	координаты X Y, символ, шрифт, множитель, цвет 1 или 0
 	* @return  ( возвращает ):	
-
-	// РУССКИЙ шрифт 
-	// Если пишем по РУССКИ то только через функцию utf8rus()
-	ST7565_Print ( 10, 10, utf8rus("Привет HELLO"), &Font_6x8, 1, 1 ); // печатаем надпись с указаным шрифтом и цветом ( 0- белый , 1 -черный )
-	// незабываем каждый раз после вызова функции utf8rus() освобождать память
-	free( pText );	// освобождаем память выделенную в функции utf8rus() посредством malloc();
-
 	******************************************************************************
 */
-char ST7565_Print(int16_t x, int16_t y, char* str, FontDef_t* Font, uint8_t multiplier, uint8_t color);
+void ST7565_Print(int16_t x, int16_t y, char* str, FontDef_t* Font, uint8_t multiplier, uint8_t color);
 //----------------------------------------------------------------------------------
 /*
 	******************************************************************************
