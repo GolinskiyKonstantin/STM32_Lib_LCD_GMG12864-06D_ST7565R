@@ -5,6 +5,8 @@
  
  Online generator https://javl.github.io/image2cpp/
  
+ author: Golinskiy Konstantin	e-mail: golinskiy.konstantin@gmail.com
+ 
  */
 
 #ifndef BITMAP_H_
