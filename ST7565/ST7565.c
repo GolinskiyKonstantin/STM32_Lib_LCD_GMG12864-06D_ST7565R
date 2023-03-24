@@ -1105,6 +1105,134 @@ uint16_t strlenUTF8( char* str ){
 //----------------------------------------------------------------------------------
 
 
+//==============================================================================
+// Процедура рисования прямоугольник с закругленніми краями ( заполненый )
+//==============================================================================
+void ST7565_DrawFillRoundRect(int16_t x, int16_t y, uint16_t width, uint16_t height, int16_t cornerRadius, uint8_t color) {
+	
+	int16_t max_radius = ((width < height) ? width : height) / 2; // 1/2 minor axis
+  if (cornerRadius > max_radius){
+    cornerRadius = max_radius;
+	}
+	
+  ST7565_DrawRectangleFilled(x + cornerRadius, y, x + cornerRadius + width - 2 * cornerRadius, y + height, color);
+  // draw four corners
+  ST7565_DrawFillCircleHelper(x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, 1, height - 2 * cornerRadius - 1, color);
+  ST7565_DrawFillCircleHelper(x + cornerRadius, y + cornerRadius, cornerRadius, 2, height - 2 * cornerRadius - 1, color);
+}
+//==============================================================================
+
+//==============================================================================
+// Процедура рисования половины окружности ( правая или левая ) ( заполненый )
+//==============================================================================
+void ST7565_DrawFillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t corners, int16_t delta, uint8_t color) {
+
+  int16_t f = 1 - r;
+  int16_t ddF_x = 1;
+  int16_t ddF_y = -2 * r;
+  int16_t x = 0;
+  int16_t y = r;
+  int16_t px = x;
+  int16_t py = y;
+
+  delta++; // Avoid some +1's in the loop
+
+  while (x < y) {
+    if (f >= 0) {
+      y--;
+      ddF_y += 2;
+      f += ddF_y;
+    }
+    x++;
+    ddF_x += 2;
+    f += ddF_x;
+
+    if (x < (y + 1)) {
+      if (corners & 1){
+        ST7565_DrawLine(x0 + x, y0 - y, x0 + x, y0 - y - 1 + 2 * y + delta, color);
+			}
+      if (corners & 2){
+        ST7565_DrawLine(x0 - x, y0 - y, x0 - x, y0 - y - 1 + 2 * y + delta, color);
+			}
+    }
+    if (y != py) {
+      if (corners & 1){
+        ST7565_DrawLine(x0 + py, y0 - px, x0 + py, y0 - px - 1 + 2 * px + delta, color);
+			}
+      if (corners & 2){
+        ST7565_DrawLine(x0 - py, y0 - px, x0 - py, y0 - px - 1 + 2 * px + delta, color);
+			}
+			py = y;
+    }
+    px = x;
+  }
+}
+//==============================================================================																		
+
+//==============================================================================
+// Процедура рисования четверти окружности (закругление, дуга) ( ширина 1 пиксель)
+//==============================================================================
+void ST7565_DrawCircleHelper(int16_t x0, int16_t y0, int16_t radius, int8_t quadrantMask, uint8_t color)
+{
+    int16_t f = 1 - radius ;
+    int16_t ddF_x = 1;
+    int16_t ddF_y = -2 * radius;
+    int16_t x = 0;
+    int16_t y = radius;
+
+    while (x <= y) {
+        if (f >= 0) {
+            y--;
+            ddF_y += 2;
+            f += ddF_y;
+        }
+				
+        x++;
+        ddF_x += 2;
+        f += ddF_x;
+
+        if (quadrantMask & 0x4) {
+            ST7565_DrawPixel(x0 + x, y0 + y, color);
+            ST7565_DrawPixel(x0 + y, y0 + x, color);;
+        }
+        if (quadrantMask & 0x2) {
+						ST7565_DrawPixel(x0 + x, y0 - y, color);
+            ST7565_DrawPixel(x0 + y, y0 - x, color);
+        }
+        if (quadrantMask & 0x8) {
+						ST7565_DrawPixel(x0 - y, y0 + x, color);
+            ST7565_DrawPixel(x0 - x, y0 + y, color);
+        }
+        if (quadrantMask & 0x1) {
+            ST7565_DrawPixel(x0 - y, y0 - x, color);
+            ST7565_DrawPixel(x0 - x, y0 - y, color);
+        }
+    }
+}
+//==============================================================================		
+
+//==============================================================================
+// Процедура рисования прямоугольник с закругленніми краями ( пустотелый )
+//==============================================================================
+void ST7565_DrawRoundRect(int16_t x, int16_t y, uint16_t width, uint16_t height, int16_t cornerRadius, uint8_t color) {
+	
+	int16_t max_radius = ((width < height) ? width : height) / 2; // 1/2 minor axis
+  if (cornerRadius > max_radius){
+    cornerRadius = max_radius;
+	}
+	
+  ST7565_DrawLine(x + cornerRadius, y, x + cornerRadius + width -1 - 2 * cornerRadius, y, color);         // Top
+  ST7565_DrawLine(x + cornerRadius, y + height - 1, x + cornerRadius + width - 1 - 2 * cornerRadius, y + height - 1, color); // Bottom
+  ST7565_DrawLine(x, y + cornerRadius, x, y + cornerRadius + height - 1 - 2 * cornerRadius, color);         // Left
+  ST7565_DrawLine(x + width - 1, y + cornerRadius, x + width - 1, y + cornerRadius + height - 1 - 2 * cornerRadius, color); // Right
+	
+  // draw four corners
+	ST7565_DrawCircleHelper(x + cornerRadius, y + cornerRadius, cornerRadius, 1, color);
+  ST7565_DrawCircleHelper(x + width - cornerRadius - 1, y + cornerRadius, cornerRadius, 2, color);
+	ST7565_DrawCircleHelper(x + width - cornerRadius - 1, y + height - cornerRadius - 1, cornerRadius, 4, color);
+  ST7565_DrawCircleHelper(x + cornerRadius, y + height - cornerRadius - 1, cornerRadius, 8, color);
+}
+//==============================================================================
 
 
 
