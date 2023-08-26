@@ -26,6 +26,7 @@ extern "C" {
 
 #include "stdlib.h"
 #include "string.h"
+#include "math.h"
 
 /*
 	подключение LCD_128_64_ST7565 ( GMG12864-06D ):
@@ -106,6 +107,7 @@ enum PixelStatus{ PIX_OFF, PIX_ON };
 	extern SPI_HandleTypeDef ST7565_SPI_HAL;
 #endif
 
+#define PI 	3.14159265
 
 #if defined (SCREEN_ORIENTATION_180)
 	#define ST7565_SetX(x) 		ST7565_w_cmd(((x+4) & 0xf0) >> 4 | 0x10); ST7565_w_cmd((x+4) & 0x0f)
@@ -443,7 +445,8 @@ void ST7565_DrawFillRoundRect(int16_t x, int16_t y, uint16_t width, uint16_t hei
 void ST7565_DrawRoundRect(int16_t x, int16_t y, uint16_t width, uint16_t height, int16_t cornerRadius, uint8_t color);
 //==============================================================================
 
-
+void ST7565_DrawArc(int16_t x0, int16_t y0, int16_t radius, int16_t startAngle, int16_t endAngle, uint8_t color, uint8_t thick);
+void ST7565_DrawLineThick(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint8_t color, uint8_t thick);
 
 
 
