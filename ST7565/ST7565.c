@@ -273,7 +273,7 @@ inline static void ST7565_w_cmd( uint8_t Command ){
 
 	******************************************************************************
 */
-void ST7565_Display_fill( uint8_t fill ){  
+void ST7565_DisplayFill( uint8_t fill ){  
 	
 	uint8_t page,column;  
 	
@@ -356,7 +356,7 @@ void ST7565_Init( void ){
 	
 	HAL_Delay(1);
 	
-	ST7565_Display_fill( 0x00 );
+	ST7565_DisplayFill( 0x00 );
 	
 	ST7565_Unselect();
    
@@ -373,7 +373,7 @@ void ST7565_Init( void ){
 
 	******************************************************************************
 */
-void ST7565_Clear_buffer(void){
+void ST7565_ClearBuffer(void){
 	
   memset( ST7565_buffer, 0, ( SCREEN_WIDTH * SCREEN_HEIGHT / 8 ) );	// отчистка памяти заполняем массив значением 0x00
 }
@@ -391,7 +391,7 @@ void ST7565_Clear_buffer(void){
 */
 void ST7565_Clear(void){
 	
-  ST7565_Clear_buffer();
+  ST7565_ClearBuffer();
 	
   uint8_t i, j;
 		
@@ -424,7 +424,7 @@ void ST7565_Clear(void){
 	******************************************************************************
 */
 // X(0 - 127)  Y(0 - 63)
-void ST7565_Draw_pixel(int16_t x, int16_t y, uint8_t color){
+void ST7565_DrawPixel(int16_t x, int16_t y, uint8_t color){
 	
     if (x >= SCREEN_WIDTH || x < 0 || y >= SCREEN_HEIGHT || y < 0) return;
 
@@ -435,7 +435,7 @@ void ST7565_Draw_pixel(int16_t x, int16_t y, uint8_t color){
         ST7565_buffer[array_pos] |= 1 << (y % 8);
     } 
 	else {
-        ST7565_buffer[array_pos] &= 0xFF ^ 1 << (y % 8);
+        ST7565_buffer[array_pos] &= ~(0x01 << (y % 8));
     }
 }
 //--------------------------------------------------------------------------------
@@ -546,7 +546,7 @@ void ST7565_DrawBitmap(int16_t x, int16_t y, const unsigned char* bitmap, int16_
                byte = (*(const unsigned char *)(&bitmap[j * byteWidth + i / 8]));
             }
 			
-            if(byte & 0x80){ ST7565_Draw_pixel(x+i, y, color); }
+            if(byte & 0x80){ ST7565_DrawPixel(x+i, y, color); }
         }
     }	
 }
@@ -636,7 +636,7 @@ void ST7565_DrawChar(int16_t x, int16_t y, unsigned char ch, FontDef_t* Font, ui
 					
 					for (yy = 0; yy < multiplier; yy++){
 						for (xx = 0; xx < multiplier; xx++){
-								ST7565_Draw_pixel(X+xx, Y+yy, color);
+								ST7565_DrawPixel(X+xx, Y+yy, color);
 						}
 					}
 					
@@ -647,7 +647,7 @@ void ST7565_DrawChar(int16_t x, int16_t y, unsigned char ch, FontDef_t* Font, ui
 					
 					for (yy = 0; yy < multiplier; yy++){
 						for (xx = 0; xx < multiplier; xx++){
-								ST7565_Draw_pixel(X+xx, Y+yy, !color);
+								ST7565_DrawPixel(X+xx, Y+yy, !color);
 						}
 					}
 				}
@@ -783,7 +783,7 @@ void ST7565_DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t c) 
 		
 		/* Vertical line */
 		for (i = y0; i <= y1; i++) {
-			ST7565_Draw_pixel(x0, i, c);
+			ST7565_DrawPixel(x0, i, c);
 		}
 		
 		/* Return from function */
@@ -805,7 +805,7 @@ void ST7565_DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t c) 
 		
 		/* Horizontal line */
 		for (i = x0; i <= x1; i++) {
-			ST7565_Draw_pixel(i, y0, c);
+			ST7565_DrawPixel(i, y0, c);
 		}
 		
 		/* Return from function */
@@ -813,7 +813,7 @@ void ST7565_DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t c) 
 	}
 	
 	while (1) {
-		ST7565_Draw_pixel(x0, y0, c);
+		ST7565_DrawPixel(x0, y0, c);
 		if (x0 == x1 && y0 == y1) {
 			break;
 		}
@@ -877,7 +877,7 @@ void ST7565_DrawRectangle(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t c)
 
 	******************************************************************************
 */
-void ST7565_DrawFilledRectangle(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t c) {
+void ST7565_DrawRectangleFilled(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t c) {
 	
 	uint8_t i;
 	
@@ -934,7 +934,7 @@ void ST7565_DrawTriangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t
 
 	******************************************************************************
 */
-void ST7565_DrawFilledTriangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t x3, int16_t y3, uint8_t color) {
+void ST7565_DrawTriangleFilled(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t x3, int16_t y3, uint8_t color) {
 	
 	int16_t deltax = 0, deltay = 0, x = 0, y = 0, xinc1 = 0, xinc2 = 0, 
 	yinc1 = 0, yinc2 = 0, den = 0, num = 0, numadd = 0, numpixels = 0, 
@@ -1010,10 +1010,10 @@ void ST7565_DrawCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c) {
 	int16_t x = 0;
 	int16_t y = r;
 
-    ST7565_Draw_pixel(x0, y0 + r, c);
-    ST7565_Draw_pixel(x0, y0 - r, c);
-    ST7565_Draw_pixel(x0 + r, y0, c);
-    ST7565_Draw_pixel(x0 - r, y0, c);
+    ST7565_DrawPixel(x0, y0 + r, c);
+    ST7565_DrawPixel(x0, y0 - r, c);
+    ST7565_DrawPixel(x0 + r, y0, c);
+    ST7565_DrawPixel(x0 - r, y0, c);
 
     while (x < y) {
         if (f >= 0) {
@@ -1025,15 +1025,15 @@ void ST7565_DrawCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c) {
         ddF_x += 2;
         f += ddF_x;
 
-        ST7565_Draw_pixel(x0 + x, y0 + y, c);
-        ST7565_Draw_pixel(x0 - x, y0 + y, c);
-        ST7565_Draw_pixel(x0 + x, y0 - y, c);
-        ST7565_Draw_pixel(x0 - x, y0 - y, c);
+        ST7565_DrawPixel(x0 + x, y0 + y, c);
+        ST7565_DrawPixel(x0 - x, y0 + y, c);
+        ST7565_DrawPixel(x0 + x, y0 - y, c);
+        ST7565_DrawPixel(x0 - x, y0 - y, c);
 
-        ST7565_Draw_pixel(x0 + y, y0 + x, c);
-        ST7565_Draw_pixel(x0 - y, y0 + x, c);
-        ST7565_Draw_pixel(x0 + y, y0 - x, c);
-        ST7565_Draw_pixel(x0 - y, y0 - x, c);
+        ST7565_DrawPixel(x0 + y, y0 + x, c);
+        ST7565_DrawPixel(x0 - y, y0 + x, c);
+        ST7565_DrawPixel(x0 + y, y0 - x, c);
+        ST7565_DrawPixel(x0 - y, y0 - x, c);
     }
 }
 //----------------------------------------------------------------------------------
@@ -1048,7 +1048,7 @@ void ST7565_DrawCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c) {
 
 	******************************************************************************
 */
-void ST7565_DrawFilledCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c) {
+void ST7565_DrawCircleFilled(int16_t x0, int16_t y0, int16_t r, uint8_t c) {
 	
 	int16_t f = 1 - r;
 	int16_t ddF_x = 1;
@@ -1056,10 +1056,10 @@ void ST7565_DrawFilledCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c) {
 	int16_t x = 0;
 	int16_t y = r;
 
-    ST7565_Draw_pixel(x0, y0 + r, c);
-    ST7565_Draw_pixel(x0, y0 - r, c);
-    ST7565_Draw_pixel(x0 + r, y0, c);
-    ST7565_Draw_pixel(x0 - r, y0, c);
+    ST7565_DrawPixel(x0, y0 + r, c);
+    ST7565_DrawPixel(x0, y0 - r, c);
+    ST7565_DrawPixel(x0 + r, y0, c);
+    ST7565_DrawPixel(x0 - r, y0, c);
     ST7565_DrawLine(x0 - r, y0, x0 + r, y0, c);
 
     while (x < y) {

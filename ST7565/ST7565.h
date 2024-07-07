@@ -76,7 +76,7 @@ extern "C" {
 		#if defined (RES_GPIO_Port)
 		#else
 			#define RES_GPIO_Port   	GPIOA
-			#define RES_Pin			GPIO_PIN_12
+			#define RES_Pin			GPIO_PIN_4
 		#endif
 		
 		//--  Cесли используем порт CS для выбора устройства тогда раскомментировать ------------
@@ -187,7 +187,7 @@ enum PixelStatus{ PIX_OFF, PIX_ON };
 
 	******************************************************************************
 */
-void ST7565_Display_fill( uint8_t fill );
+void ST7565_DisplayFill( uint8_t fill );
 //--------------------------------------------------------------------------------
 
 
@@ -212,7 +212,7 @@ void ST7565_Init( void );
 
 	******************************************************************************
 */
-void ST7565_Clear_buffer(void);
+void ST7565_ClearBuffer(void);
 //--------------------------------------------------------------------------------
 
 
@@ -239,7 +239,7 @@ void ST7565_Clear(void);
 	******************************************************************************
 */
 // X(0 - 127)  Y(0 - 63)
-void ST7565_Draw_pixel(int16_t x, int16_t y, uint8_t color);
+void ST7565_DrawPixel(int16_t x, int16_t y, uint8_t color);
 //--------------------------------------------------------------------------------
 
 
@@ -350,7 +350,7 @@ void ST7565_DrawRectangle(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t c)
 
 	******************************************************************************
 */
-void ST7565_DrawFilledRectangle(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t c);
+void ST7565_DrawRectangleFilled(int16_t x, int16_t y, int16_t w, int16_t h, uint8_t c);
 //----------------------------------------------------------------------------------
 
 
@@ -376,7 +376,7 @@ void ST7565_DrawTriangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t
 
 	******************************************************************************
 */
-void ST7565_DrawFilledTriangle(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t x3, int16_t y3, uint8_t color);
+void ST7565_DrawTriangleFilled(int16_t x1, int16_t y1, int16_t x2, int16_t y2, int16_t x3, int16_t y3, uint8_t color);
 //----------------------------------------------------------------------------------
 
 
@@ -402,7 +402,7 @@ void ST7565_DrawCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c);
 
 	******************************************************************************
 */
-void ST7565_DrawFilledCircle(int16_t x0, int16_t y0, int16_t r, uint8_t c);
+void ST7565_DrawCircleFilled(int16_t x0, int16_t y0, int16_t r, uint8_t c);
 //----------------------------------------------------------------------------------
 
 
